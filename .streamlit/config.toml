@@ -1,0 +1,26 @@
+[server]
+headless = true
+
+[runner]
+magicEnabled = true
+```
+
+5. もう一つファイルを作成：**「Add file」** → **「Create new file」**
+6. ファイル名: `.python-version`
+7. 内容:
+```
+3.11
+```
+
+8. **「Commit changes」** をクリック
+
+### さらに、requirements.txtも修正
+
+1. `requirements.txt` を開いて編集（鉛筆マーク）
+2. 以下に変更（バージョン指定を緩める）：
+```
+streamlit>=1.28.0
+pandas>=2.0.0
+numpy>=1.24.0
+plotly>=5.17.0
+statsmodels>=0.14.0
