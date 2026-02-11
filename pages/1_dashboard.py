@@ -304,8 +304,8 @@ else:
                     labels={'count': '生徒数'}
                 )
                 # 軸ラベルを明確化
-                fig2.update_xaxis(title_text='得点率(%)')
-                fig2.update_yaxis(title_text='生徒数')
+                fig2.update_xaxes(title_text='得点率(%)')
+                fig2.update_yaxes(title_text='生徒数')
                 st.plotly_chart(fig2, use_container_width=True)
             
             # 能力間の相関分析
@@ -400,8 +400,8 @@ else:
                     labels={'count': '生徒数'}
                 )
                 # 軸ラベルを明確化
-                fig2.update_xaxis(title_text='得点率(%)')
-                fig2.update_yaxis(title_text='生徒数')
+                fig2.update_xaxes(title_text='得点率(%)')
+                fig2.update_yaxes(title_text='生徒数')
                 st.plotly_chart(fig2, use_container_width=True)
         
         # タブ4: 教科別分析
