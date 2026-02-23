@@ -42,6 +42,17 @@ html, body, [class*="css"] { font-family: 'Noto Sans JP', sans-serif; }
 </style>
 """, unsafe_allow_html=True)
 
+# ─── Rパッケージのインストール ───────────────────────
+@st.cache_resource
+def install_r_packages():
+    subprocess.run(
+        ["Rscript", "-e",
+         "install.packages(c('jsonlite', 'dplyr', 'tidyr'), repos='https://cran.rstudio.com/')"],
+        capture_output=True
+    )
+
+install_r_packages()
+
 # ─── DB接続 ──────────────────────────────────────────
 @st.cache_resource
 def get_conn():
