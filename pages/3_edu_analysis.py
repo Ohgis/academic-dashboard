@@ -53,9 +53,7 @@ def install_r_packages():
     )
     return result.stdout, result.stderr
 
-stdout, stderr = install_r_packages()
-st.write("R install stdout:", stdout)
-st.write("R install stderr:", stderr)
+install_r_packages()
 
 # ─── DB接続 ──────────────────────────────────────────
 @st.cache_resource
