@@ -47,7 +47,7 @@ html, body, [class*="css"] { font-family: 'Noto Sans JP', sans-serif; }
 def install_r_packages():
     result = subprocess.run(
         ["Rscript", "-e",
-         "install.packages(c('jsonlite', 'dplyr', 'tidyr'), repos='https://cran.rstudio.com/')"],
+         "dir.create(Sys.getenv('R_LIBS_USER'), recursive=TRUE, showWarnings=FALSE); install.packages(c('jsonlite', 'dplyr', 'tidyr'), lib=Sys.getenv('R_LIBS_USER'), repos='https://cran.rstudio.com/')"],
         capture_output=True,
         text=True
     )
