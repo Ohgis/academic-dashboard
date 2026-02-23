@@ -221,13 +221,12 @@ else:
         df = calculate_scores(df)
         
         # タブで機能を分割
-        tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
+        tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
             "📄 データ確認", 
             "🎯 能力別分析",
             "📦 領域別分析",
             "📚 教科別分析",
-            "✓ 小問分析",
-            "🏫 クラス別分析",
+            "✓ 小問分析", 
             "👤 個別診断",
             "📊 総合ダッシュボード"
         ])
@@ -304,10 +303,10 @@ else:
                     labels={'count': '生徒数'}
                 )
                 # 軸ラベルを明確化
-                fig2.update_xaxes(title_text='得点率(%)')
-                fig2.update_yaxes(title_text='生徒数')
+                fig2.update_xaxis(title_text='得点率(%)')
+                fig2.update_yaxis(title_text='生徒数')
                 st.plotly_chart(fig2, use_container_width=True)
-            
+                          
             # 能力間の相関分析
             st.markdown("### 能力間の相関")
             
@@ -388,7 +387,7 @@ else:
                 )
                 st.plotly_chart(fig, use_container_width=True)
                 
-                # ヒストグラム（領域ごとに独立表示）
+                # ヒストグラム（重ね合わせ）
                 fig2 = px.histogram(
                     plot_df,
                     x='得点率(%)',
@@ -396,12 +395,8 @@ else:
                     nbins=20,
                     title='領域別得点率のヒストグラム',
                     opacity=0.7,
-                    barmode='group',  # overlayからgroupに変更
-                    labels={'count': '生徒数'}
+                    barmode='overlay'
                 )
-                # 軸ラベルを明確化
-                fig2.update_xaxes(title_text='得点率(%)')
-                fig2.update_yaxes(title_text='生徒数')
                 st.plotly_chart(fig2, use_container_width=True)
         
         # タブ4: 教科別分析
@@ -604,303 +599,8 @@ else:
             st.markdown("### 詳細データ")
             st.dataframe(correct_rate_df.round(2), use_container_width=True)
         
-        # タブ6: クラス別分析
+        # タブ6: 個別診断
         with tab6:
-            st.subheader("クラス別診断")
-            
-            # クラスと教科の選択
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                if 'class' in df.columns:
-                    classes = sorted(df['class'].unique())
-                    selected_class = st.selectbox("クラスを選択", classes)
-                else:
-                    st.error("データに'class'列が含まれていません。")
-                    selected_class = None
-            
-            with col2:
-                # 教科選択（複数教科がある場合）
-                if 'subject' in df.columns:
-                    subjects_available = sorted(df['subject'].unique())
-                    if len(subjects_available) > 1:
-                        selected_subject = st.selectbox("教科を選択", ['全教科'] + list(subjects_available), key='class_subject')
-                    else:
-                        selected_subject = subjects_available[0]
-                        st.info(f"教科: {selected_subject}")
-                else:
-                    selected_subject = '全教科'
-            
-            if selected_class is not None:
-                # データをフィルタリング
-                if selected_subject == '全教科':
-                    class_df_filtered = df[df['class'] == selected_class]
-                else:
-                    class_df_filtered = df[(df['class'] == selected_class) & (df['subject'] == selected_subject)]
-                
-                if len(class_df_filtered) == 0:
-                    st.warning("選択された条件に該当するデータがありません。")
-                else:
-                    # 基本情報
-                    col1, col2, col3, col4 = st.columns(4)
-                    with col1:
-                        st.metric("クラス", selected_class)
-                    with col2:
-                        st.metric("生徒数", len(class_df_filtered['ID'].unique()))
-                    with col3:
-                        if selected_subject == '全教科':
-                            avg_score = class_df_filtered.groupby('ID')['total_rate'].mean().mean()
-                            st.metric("総合得点率平均（全教科）", f"{avg_score:.1f}%")
-                        else:
-                            st.metric(f"総合得点率平均（{selected_subject}）", f"{class_df_filtered['total_rate'].mean():.1f}%")
-                    with col4:
-                        if selected_subject == '全教科':
-                            std_score = class_df_filtered.groupby('ID')['total_rate'].mean().std()
-                            st.metric("標準偏差", f"{std_score:.1f}")
-                        else:
-                            st.metric("標準偏差", f"{class_df_filtered['total_rate'].std():.1f}")
-                    
-                    # 教科別の得点表示（全教科選択時）
-                    if selected_subject == '全教科' and 'subject' in df.columns and len(subjects_available) > 1:
-                        st.markdown("### 教科別総合得点率")
-                        subject_stats = []
-                        for subj in subjects_available:
-                            subj_df = class_df_filtered[class_df_filtered['subject'] == subj]
-                            if len(subj_df) > 0:
-                                subject_stats.append({
-                                    '教科': subj,
-                                    '平均得点率(%)': subj_df['total_rate'].mean(),
-                                    '標準偏差': subj_df['total_rate'].std(),
-                                    '最高(%)': subj_df['total_rate'].max(),
-                                    '最低(%)': subj_df['total_rate'].min()
-                                })
-                        subject_stats_df = pd.DataFrame(subject_stats)
-                        st.dataframe(subject_stats_df.round(2), use_container_width=True)
-                    
-                    # レーダーチャート（能力）
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        st.markdown("### 能力別プロファイル")
-                        
-                        # クラス平均を計算
-                        ability_avg = []
-                        for ability, label in ABILITY_LABELS.items():
-                            rate_col = f'{ability}_rate'
-                            if rate_col in class_df_filtered.columns:
-                                ability_avg.append({
-                                    '能力': label,
-                                    '平均得点率(%)': class_df_filtered[rate_col].mean()
-                                })
-                        
-                        if ability_avg:
-                            ability_avg_df = pd.DataFrame(ability_avg)
-                            
-                            fig = go.Figure()
-                            
-                            fig.add_trace(go.Scatterpolar(
-                                r=ability_avg_df['平均得点率(%)'].tolist(),
-                                theta=ability_avg_df['能力'].tolist(),
-                                fill='toself',
-                                name=f'{selected_class}クラス',
-                                line=dict(color='blue')
-                            ))
-                            
-                            # 全体平均との比較（選択教科）
-                            if selected_subject == '全教科':
-                                all_avg = df.groupby('ID').mean(numeric_only=True)
-                            else:
-                                all_avg = df[df['subject'] == selected_subject]
-                            
-                            overall_ability_avg = []
-                            for ability, label in ABILITY_LABELS.items():
-                                rate_col = f'{ability}_rate'
-                                if rate_col in all_avg.columns:
-                                    if selected_subject == '全教科':
-                                        overall_ability_avg.append(all_avg[rate_col].mean())
-                                    else:
-                                        overall_ability_avg.append(all_avg[rate_col].mean())
-                            
-                            if overall_ability_avg:
-                                fig.add_trace(go.Scatterpolar(
-                                    r=overall_ability_avg,
-                                    theta=ability_avg_df['能力'].tolist(),
-                                    fill='toself',
-                                    name='全体平均',
-                                    line=dict(color='red', dash='dash')
-                                ))
-                            
-                            fig.update_layout(
-                                polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
-                                showlegend=True,
-                                title=f'能力別得点率（{selected_subject}）'
-                            )
-                            
-                            st.plotly_chart(fig, use_container_width=True)
-                    
-                    with col2:
-                        st.markdown("### 領域別プロファイル")
-                        
-                        # クラス平均を計算
-                        domain_avg = []
-                        for domain, label in DOMAIN_LABELS.items():
-                            rate_col = f'{domain}_rate'
-                            if rate_col in class_df_filtered.columns:
-                                domain_avg.append({
-                                    '領域': label,
-                                    '平均得点率(%)': class_df_filtered[rate_col].mean()
-                                })
-                        
-                        if domain_avg:
-                            domain_avg_df = pd.DataFrame(domain_avg)
-                            
-                            fig2 = go.Figure()
-                            
-                            fig2.add_trace(go.Scatterpolar(
-                                r=domain_avg_df['平均得点率(%)'].tolist(),
-                                theta=domain_avg_df['領域'].tolist(),
-                                fill='toself',
-                                name=f'{selected_class}クラス',
-                                line=dict(color='green')
-                            ))
-                            
-                            # 全体平均との比較
-                            if selected_subject == '全教科':
-                                all_avg = df.groupby('ID').mean(numeric_only=True)
-                            else:
-                                all_avg = df[df['subject'] == selected_subject]
-                            
-                            overall_domain_avg = []
-                            for domain, label in DOMAIN_LABELS.items():
-                                rate_col = f'{domain}_rate'
-                                if rate_col in all_avg.columns:
-                                    if selected_subject == '全教科':
-                                        overall_domain_avg.append(all_avg[rate_col].mean())
-                                    else:
-                                        overall_domain_avg.append(all_avg[rate_col].mean())
-                            
-                            if overall_domain_avg:
-                                fig2.add_trace(go.Scatterpolar(
-                                    r=overall_domain_avg,
-                                    theta=domain_avg_df['領域'].tolist(),
-                                    fill='toself',
-                                    name='全体平均',
-                                    line=dict(color='red', dash='dash')
-                                ))
-                            
-                            fig2.update_layout(
-                                polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
-                                showlegend=True,
-                                title=f'領域別得点率（{selected_subject}）'
-                            )
-                            
-                            st.plotly_chart(fig2, use_container_width=True)
-                    
-                    # 能力別・領域別の詳細統計
-                    st.markdown("### 能力別詳細統計")
-                    
-                    ability_detail = []
-                    for ability, label in ABILITY_LABELS.items():
-                        rate_col = f'{ability}_rate'
-                        if rate_col in class_df_filtered.columns:
-                            ability_detail.append({
-                                'カテゴリ': label,
-                                '平均得点率(%)': class_df_filtered[rate_col].mean(),
-                                '標準偏差': class_df_filtered[rate_col].std(),
-                                '最高(%)': class_df_filtered[rate_col].max(),
-                                '最低(%)': class_df_filtered[rate_col].min(),
-                                '中央値(%)': class_df_filtered[rate_col].median()
-                            })
-                    
-                    ability_detail_df = pd.DataFrame(ability_detail)
-                    st.dataframe(ability_detail_df.round(2), use_container_width=True)
-                    
-                    st.markdown("### 領域別詳細統計")
-                    
-                    domain_detail = []
-                    for domain, label in DOMAIN_LABELS.items():
-                        rate_col = f'{domain}_rate'
-                        if rate_col in class_df_filtered.columns:
-                            domain_detail.append({
-                                'カテゴリ': label,
-                                '平均得点率(%)': class_df_filtered[rate_col].mean(),
-                                '標準偏差': class_df_filtered[rate_col].std(),
-                                '最高(%)': class_df_filtered[rate_col].max(),
-                                '最低(%)': class_df_filtered[rate_col].min(),
-                                '中央値(%)': class_df_filtered[rate_col].median()
-                            })
-                    
-                    domain_detail_df = pd.DataFrame(domain_detail)
-                    st.dataframe(domain_detail_df.round(2), use_container_width=True)
-                    
-                    # 得点分布
-                    st.markdown("### 総合得点率の分布")
-                    
-                    fig3 = px.histogram(
-                        class_df_filtered,
-                        x='total_rate',
-                        nbins=20,
-                        title=f'{selected_class}クラスの総合得点率分布',
-                        labels={'total_rate': '総合得点率(%)', 'count': '生徒数'}
-                    )
-                    fig3.update_layout(showlegend=False)
-                    st.plotly_chart(fig3, use_container_width=True)
-                    
-                    # 教科別の強み・弱み（全教科選択時）
-                    if selected_subject == '全教科' and len(subjects_available) > 1:
-                        st.markdown("### 教科別パフォーマンス")
-                        
-                        subject_performance = []
-                        for subj in subjects_available:
-                            subj_class_df = df[(df['class'] == selected_class) & (df['subject'] == subj)]
-                            subj_all_df = df[df['subject'] == subj]
-                            
-                            if len(subj_class_df) > 0:
-                                class_avg = subj_class_df['total_rate'].mean()
-                                all_avg = subj_all_df['total_rate'].mean()
-                                diff = class_avg - all_avg
-                                
-                                subject_performance.append({
-                                    '教科': subj,
-                                    'クラス平均(%)': class_avg,
-                                    '全体平均(%)': all_avg,
-                                    '差分': diff
-                                })
-                        
-                        subject_performance_df = pd.DataFrame(subject_performance)
-                        subject_performance_df = subject_performance_df.sort_values('差分', ascending=False)
-                        
-                        st.dataframe(subject_performance_df.round(2), use_container_width=True)
-                        
-                        # 教科別レーダーチャート
-                        fig4 = go.Figure()
-                        
-                        fig4.add_trace(go.Scatterpolar(
-                            r=subject_performance_df['クラス平均(%)'].tolist(),
-                            theta=subject_performance_df['教科'].tolist(),
-                            fill='toself',
-                            name=f'{selected_class}クラス',
-                            line=dict(color='blue')
-                        ))
-                        
-                        fig4.add_trace(go.Scatterpolar(
-                            r=subject_performance_df['全体平均(%)'].tolist(),
-                            theta=subject_performance_df['教科'].tolist(),
-                            fill='toself',
-                            name='全体平均',
-                            line=dict(color='red', dash='dash')
-                        ))
-                        
-                        fig4.update_layout(
-                            polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
-                            showlegend=True,
-                            title='教科別総合得点率'
-                        )
-                        
-                        st.plotly_chart(fig4, use_container_width=True)
-        
-        # タブ7: 個別診断
-        with tab7:
             st.subheader("生徒別診断")
             
             # 生徒と教科の選択
@@ -1139,8 +839,8 @@ else:
                     
                     st.plotly_chart(fig3, use_container_width=True)
         
-        # タブ8: 総合ダッシュボード
-        with tab8:
+        # タブ7: 総合ダッシュボード
+        with tab7:
             st.subheader("総合ダッシュボード")
             
             # ヒートマップ（生徒×能力）
