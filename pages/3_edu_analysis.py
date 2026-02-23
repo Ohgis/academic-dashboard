@@ -143,7 +143,7 @@ def run_r(r_function: str, df_wide: pd.DataFrame,
         json.dump(payload, f, ensure_ascii=False)
         tmp = f.name
     try:
-        RSCRIPT = r"C:\Program Files\R\R-4.4.2\bin\x64\Rscript.exe"
+        RSCRIPT = "Rscript"
         R_SCRIPT = os.path.join(os.path.dirname(os.path.dirname(__file__)), "analyze_v2.R")
         res = subprocess.run([RSCRIPT, R_SCRIPT, tmp],
                              capture_output=True, text=True, timeout=120)
