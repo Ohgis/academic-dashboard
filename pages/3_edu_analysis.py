@@ -45,13 +45,17 @@ html, body, [class*="css"] { font-family: 'Noto Sans JP', sans-serif; }
 # ─── Rパッケージのインストール ───────────────────────
 @st.cache_resource
 def install_r_packages():
-    subprocess.run(
+    result = subprocess.run(
         ["Rscript", "-e",
          "install.packages(c('jsonlite', 'dplyr', 'tidyr'), repos='https://cran.rstudio.com/')"],
-        capture_output=True
+        capture_output=True,
+        text=True
     )
+    return result.stdout, result.stderr
 
-install_r_packages()
+stdout, stderr = install_r_packages()
+st.write("R install stdout:", stdout)
+st.write("R install stderr:", stderr)
 
 # ─── DB接続 ──────────────────────────────────────────
 @st.cache_resource
