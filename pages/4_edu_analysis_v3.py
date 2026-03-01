@@ -53,6 +53,7 @@ install_r_packages()
 
 # ─── DB接続 ──────────────────────────────────────────
 @st.cache_resource
+st.write(dict(st.secrets))
 def get_conn():
     return psycopg2.connect(
         host=st.secrets["DB_HOST"], port=st.secrets.get("DB_PORT", 5432),
