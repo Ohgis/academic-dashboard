@@ -53,12 +53,11 @@ install_r_packages()
 
 # ─── DB接続 ──────────────────────────────────────────
 @st.cache_resource
-st.write(dict(st.secrets))
 def get_conn():
     return psycopg2.connect(
-        host=st.secrets["DB_HOST"], port=st.secrets.get("DB_PORT", 5432),
-        database=st.secrets["DB_NAME"], user=st.secrets["DB_USER"],
-        password=st.secrets["DB_PASSWORD"],
+        host=st.secrets["V3_DB_HOST"], port=st.secrets.get("V3_DB_PORT", 5432),
+        database=st.secrets["V3_DB_NAME"], user=st.secrets["V3_DB_USER"],
+        password=st.secrets["V3_DB_PASSWORD"],
     )
 
 def qdf(sql, params=None):
