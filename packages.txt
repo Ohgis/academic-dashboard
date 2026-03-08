@@ -1,1 +1,4 @@
 r-base
+r-cran-jsonlite
+r-cran-dplyr
+r-cran-tidyr
