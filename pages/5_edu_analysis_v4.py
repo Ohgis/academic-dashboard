@@ -374,18 +374,19 @@ def plot_domain(result: dict, group_by: str, chart_type: str = "bar"):
     else:
         df["group"] = df["school"].astype(str)
 
-    domain_col = result.get("domain_col", result.get("domain_level", "大領域"))
+    # Rはdomain列名を"domain"に統一して返す
+    domain_label = result.get("domain_col", "領域")  # 表示用ラベル
     groups = sorted(df["group"].unique())
     cmap   = color_map(groups)
 
     col1, col2 = st.columns([3, 2])
     with col1:
         fig = px.bar(
-            df, x=domain_col, y="avg_correct_rate",
+            df, x="domain", y="avg_correct_rate",
             color="group", barmode="group",
             color_discrete_map=cmap,
-            labels={domain_col: "領域", "avg_correct_rate": "正答率(%)", "group": "グループ"},
-            title=f"{domain_col}別 正答率比較",
+            labels={"domain": "領域", "avg_correct_rate": "正答率(%)", "group": "グループ"},
+            title=f"{domain_label}別 正答率比較",
             template=PLOTLY_TEMPLATE,
         )
         fig.update_layout(font_family="Noto Sans JP",
@@ -394,12 +395,12 @@ def plot_domain(result: dict, group_by: str, chart_type: str = "bar"):
 
     with col2:
         # レーダーチャート（グループ別）
-        domains = sorted(df[domain_col].unique())
+        domains = sorted(df["domain"].unique())
         fig_r = go.Figure()
         for g in groups:
-            sub = df[df["group"] == g].sort_values(domain_col)
+            sub = df[df["group"] == g].sort_values("domain")
             r     = sub["avg_correct_rate"].tolist()
-            theta = sub[domain_col].astype(str).tolist()
+            theta = sub["domain"].astype(str).tolist()
             r += r[:1]; theta += theta[:1]
             fig_r.add_trace(go.Scatterpolar(
                 r=r, theta=theta, fill="toself",
