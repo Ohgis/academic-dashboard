@@ -117,7 +117,7 @@ result <- tryCatch({
         .groups = "drop"
       )
 
-    list(domain_scores = result_df, domain_level = domain_col)
+    list(domain_scores = result_df, domain_level = domain_col, domain_col = domain_col)
 
   # ── 3. viewpoint_analysis: 観点別正答率 ──────────────
   } else if (analysis == "viewpoint_analysis") {

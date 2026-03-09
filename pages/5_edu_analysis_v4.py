@@ -324,11 +324,11 @@ def plot_theta_distribution(result: dict, group_by: str):
         for g in groups:
             sub = ind_df[ind_df["group"] == g]["theta"].dropna()
             fig_hist.add_trace(go.Histogram(
-                x=sub, name=g, opacity=0.75,
+                x=sub, name=g, opacity=1.0,
                 marker_color=cmap[g], nbinsx=20,
             ))
         fig_hist.update_layout(
-            title="θ分布（ヒストグラム）", barmode="overlay",
+            title="θ分布（ヒストグラム）", barmode="group",
             xaxis_title="θ値", yaxis_title="人数",
             template=PLOTLY_TEMPLATE, font_family="Noto Sans JP",
             legend=dict(orientation="h", y=-0.2),
@@ -374,7 +374,7 @@ def plot_domain(result: dict, group_by: str, chart_type: str = "bar"):
     else:
         df["group"] = df["school"].astype(str)
 
-    domain_col = result.get("domain_level", "大領域")
+    domain_col = result.get("domain_col", result.get("domain_level", "大領域"))
     groups = sorted(df["group"].unique())
     cmap   = color_map(groups)
 
@@ -779,14 +779,14 @@ with tabs[0]:
             with sub_tabs[1]:
                 with st.spinner("大領域別集計中..."):
                     r = run_r("domain_analysis", tr, qm_sub,
-                              {"group_by": group_by, "domain_level": "large"})
+                              {"group_by": group_by, "domain_level": "large", "domain_col": "大領域"})
                 st.session_state.analysis_results["大領域"] = r
                 plot_domain(r, group_by)
 
             with sub_tabs[2]:
                 with st.spinner("中領域別集計中..."):
                     r = run_r("domain_analysis", tr, qm_sub,
-                              {"group_by": group_by, "domain_level": "mid"})
+                              {"group_by": group_by, "domain_level": "mid", "domain_col": "中領域"})
                 st.session_state.analysis_results["中領域"] = r
                 plot_domain(r, group_by)
 
