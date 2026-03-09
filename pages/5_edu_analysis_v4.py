@@ -98,12 +98,12 @@ html, body, [class*="css"] {
 }
 
 /* サイドバー */
-[data-testid="stSidebar"] {
+[data-testid="stSidebar"] > div:first-child {
     background: linear-gradient(180deg, #0a0f1e 0%, #0d1b2e 100%);
     border-right: 1px solid rgba(56,189,248,0.1);
 }
-[data-testid="stSidebar"] label { color: #94a3b8 !important; }
-[data-testid="stSidebar"] .stSelectbox > div { color: #e2e8f0; }
+section[data-testid="stSidebar"] label { color: #94a3b8 !important; }
+section[data-testid="stSidebar"] p { color: #94a3b8; }
 
 /* AI 回答ボックス */
 .ai-box {
@@ -252,11 +252,13 @@ def run_r(analysis_type: str, data: pd.DataFrame,
     try:
         res = subprocess.run(
             ["Rscript", R_SCRIPT, tmp],
-            capture_output=True, text=True, timeout=120
+            capture_output=True, timeout=120
         )
+        stdout = res.stdout.decode("utf-8", errors="replace")
+        stderr = res.stderr.decode("utf-8", errors="replace")
         if res.returncode != 0:
-            return {"error": res.stderr[-500:]}
-        return json.loads(res.stdout)
+            return {"error": stderr[-500:]}
+        return json.loads(stdout)
     except subprocess.TimeoutExpired:
         return {"error": "R分析がタイムアウトしました（120秒）"}
     except json.JSONDecodeError:
