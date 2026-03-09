@@ -98,12 +98,14 @@ html, body, [class*="css"] {
 }
 
 /* サイドバー */
-[data-testid="stSidebar"] > div:first-child {
-    background: linear-gradient(180deg, #0a0f1e 0%, #0d1b2e 100%);
-    border-right: 1px solid rgba(56,189,248,0.1);
+[data-testid="stSidebar"],
+[data-testid="stSidebar"] > div,
+[data-testid="stSidebar"] > div > div {
+    background: linear-gradient(180deg, #0a0f1e 0%, #0d1b2e 100%) !important;
 }
-section[data-testid="stSidebar"] label { color: #94a3b8 !important; }
-section[data-testid="stSidebar"] p { color: #94a3b8; }
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] span { color: #94a3b8 !important; }
 
 /* AI 回答ボックス */
 .ai-box {
@@ -247,7 +249,17 @@ def run_r(analysis_type: str, data: pd.DataFrame,
 
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json",
                                      delete=False, encoding="utf-8") as f:
-        json.dump(payload, f, ensure_ascii=False)
+        # NaN → null に変換（RのfromJSONはNaNを読めないため）
+        import math
+        def sanitize(obj):
+            if isinstance(obj, float) and math.isnan(obj):
+                return None
+            if isinstance(obj, dict):
+                return {k: sanitize(v) for k, v in obj.items()}
+            if isinstance(obj, list):
+                return [sanitize(v) for v in obj]
+            return obj
+        json.dump(sanitize(payload), f, ensure_ascii=False)
         tmp = f.name
     try:
         res = subprocess.run(
