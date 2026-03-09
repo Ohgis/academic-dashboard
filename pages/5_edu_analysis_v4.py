@@ -98,14 +98,11 @@ html, body, [class*="css"] {
 }
 
 /* サイドバー */
-[data-testid="stSidebar"],
-[data-testid="stSidebar"] > div,
-[data-testid="stSidebar"] > div > div {
-    background: linear-gradient(180deg, #0a0f1e 0%, #0d1b2e 100%) !important;
-}
-[data-testid="stSidebar"] label,
-[data-testid="stSidebar"] p,
-[data-testid="stSidebar"] span { color: #94a3b8 !important; }
+[data-testid="stSidebar"] { background-color: #0d1b2e !important; }
+[data-testid="stSidebar"] * { color: #94a3b8 !important; }
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3 { color: #e2e8f0 !important; }
 
 /* AI 回答ボックス */
 .ai-box {
@@ -362,7 +359,8 @@ def plot_theta_distribution(result: dict, group_by: str):
         "median_theta": "中央値", "q25": "Q1",
         "q75": "Q3", "min_theta": "最小", "max_theta": "最大"
     }
-    show_df = sum_df.rename(columns=disp_cols)[[c for c in disp_cols.values() if c in show_df.columns or c in sum_df.rename(columns=disp_cols).columns]]
+    renamed_df = sum_df.rename(columns=disp_cols)
+    show_df = renamed_df[[c for c in disp_cols.values() if c in renamed_df.columns]]
     st.dataframe(show_df, hide_index=True, use_container_width=True)
 
 
