@@ -6,3 +6,7 @@ openai
 statsmodels
 anthropic
 psycopg2-binary
+pymupdf
+langchain
+langchain-openai
+langchain-text-splitters
