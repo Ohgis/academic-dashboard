@@ -3,6 +3,7 @@ pages/7_rag_admin.py
 RAG管理者画面（PDF取り込み・ドキュメント管理）
 """
 
+import os
 import tempfile
 
 import streamlit as st
