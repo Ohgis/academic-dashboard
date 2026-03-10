@@ -9,7 +9,7 @@ from pathlib import Path
 import fitz  # PyMuPDF
 import psycopg2
 from openai import OpenAI
-from langchain.text_splitters import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 import streamlit as st
 
 CHUNK_SIZE = 512
