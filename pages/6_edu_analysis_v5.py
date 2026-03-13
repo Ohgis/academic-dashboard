@@ -756,12 +756,15 @@ with tabs[0]:
             with st.spinner("θ推定中（WLE）..."):
                 r = run_r("irt_theta", tr, qm_sub, {"group_by": group_by})
             st.session_state.analysis_results["θ分布"] = r
-            plot_theta_distribution(r, group_by)
-            render_ai_panel(r, "theta", [
-                "θ分布の特徴から、学力の分布状況と指導上の課題を教えてください。",
-                "グループ間の学力差について、注目すべき点を教えてください。",
-                "管理職・指導主事向けに簡潔にまとめてください。",
-            ])
+    # ボタン外で常に描画
+    if "θ分布" in st.session_state.analysis_results:
+        r = st.session_state.analysis_results["θ分布"]
+        plot_theta_distribution(r, group_by)
+        render_ai_panel(r, "theta", [
+            "θ分布の特徴から、学力の分布状況と指導上の課題を教えてください。",
+            "グループ間の学力差について、注目すべき点を教えてください。",
+            "管理職・指導主事向けに簡潔にまとめてください。",
+        ])
 
 # ════════════════════════════════════════════════════════
 # TAB 1: 大領域
@@ -778,12 +781,14 @@ with tabs[1]:
                 r = run_r("domain_analysis", tr, qm_sub,
                           {"group_by": group_by, "domain_level": "large", "domain_col": "大領域"})
             st.session_state.analysis_results["大領域"] = r
-            plot_domain(r, group_by)
-            render_ai_panel(r, "large_domain", [
-                "大領域別の正答率から、重点的に指導すべき領域を教えてください。",
-                "グループ間で差が大きい領域とその要因について教えてください。",
-                "管理職・指導主事向けに簡潔にまとめてください。",
-            ])
+    if "大領域" in st.session_state.analysis_results:
+        r = st.session_state.analysis_results["大領域"]
+        plot_domain(r, group_by)
+        render_ai_panel(r, "large_domain", [
+            "大領域別の正答率から、重点的に指導すべき領域を教えてください。",
+            "グループ間で差が大きい領域とその要因について教えてください。",
+            "管理職・指導主事向けに簡潔にまとめてください。",
+        ])
 
 # ════════════════════════════════════════════════════════
 # TAB 2: 中領域
@@ -800,15 +805,17 @@ with tabs[2]:
                 r = run_r("domain_analysis", tr, qm_sub,
                           {"group_by": group_by, "domain_level": "mid", "domain_col": "中領域"})
             st.session_state.analysis_results["中領域"] = r
-            plot_domain(r, group_by)
-            render_ai_panel(r, "mid_domain", [
-                "中領域別の正答率から、特に苦手な内容単元を教えてください。",
-                "グループ間で差が大きい中領域とその要因について教えてください。",
-                "管理職・指導主事向けに簡潔にまとめてください。",
-            ])
+    if "中領域" in st.session_state.analysis_results:
+        r = st.session_state.analysis_results["中領域"]
+        plot_domain(r, group_by)
+        render_ai_panel(r, "mid_domain", [
+            "中領域別の正答率から、特に苦手な内容単元を教えてください。",
+            "グループ間で差が大きい中領域とその要因について教えてください。",
+            "管理職・指導主事向けに簡潔にまとめてください。",
+        ])
 
 # ════════════════════════════════════════════════════════
-# TAB 3: 小問分析（中領域と観点の間）
+# TAB 3: 小問分析
 # ════════════════════════════════════════════════════════
 with tabs[3]:
     st.markdown(f"#### 🔬 小問分析　<span class='badge'>{badge_text}</span>", unsafe_allow_html=True)
@@ -821,12 +828,14 @@ with tabs[3]:
             with st.spinner("小問分析中..."):
                 r = run_r("item_analysis", tr, qm_sub)
             st.session_state.analysis_results["小問分析"] = r
-            plot_item_analysis(r)
-            render_ai_panel(r, "item", [
-                "全国値と比べて特に差が大きい問題の傾向と、授業改善のヒントを教えてください。",
-                "正答率が低い問題群に共通する特徴を分析してください。",
-                "管理職・指導主事向けに簡潔にまとめてください。",
-            ])
+    if "小問分析" in st.session_state.analysis_results:
+        r = st.session_state.analysis_results["小問分析"]
+        plot_item_analysis(r)
+        render_ai_panel(r, "item", [
+            "全国値と比べて特に差が大きい問題の傾向と、授業改善のヒントを教えてください。",
+            "正答率が低い問題群に共通する特徴を分析してください。",
+            "管理職・指導主事向けに簡潔にまとめてください。",
+        ])
 
 # ════════════════════════════════════════════════════════
 # TAB 4: 観点
@@ -842,12 +851,14 @@ with tabs[4]:
             with st.spinner("観点別集計中..."):
                 r = run_r("viewpoint_analysis", tr, qm_sub, {"group_by": group_by})
             st.session_state.analysis_results["観点"] = r
-            plot_attribute(r, "viewpoint_scores", "観点", "観点別 正答率", group_by, "観点名")
-            render_ai_panel(r, "viewpoint", [
-                "観点別の正答率から、どの観点の指導を強化すべきか教えてください。",
-                "グループ間で観点別の差異が大きい箇所とその示唆を教えてください。",
-                "管理職・指導主事向けに簡潔にまとめてください。",
-            ])
+    if "観点" in st.session_state.analysis_results:
+        r = st.session_state.analysis_results["観点"]
+        plot_attribute(r, "viewpoint_scores", "観点", "観点別 正答率", group_by, "観点名")
+        render_ai_panel(r, "viewpoint", [
+            "観点別の正答率から、どの観点の指導を強化すべきか教えてください。",
+            "グループ間で観点別の差異が大きい箇所とその示唆を教えてください。",
+            "管理職・指導主事向けに簡潔にまとめてください。",
+        ])
 
 # ════════════════════════════════════════════════════════
 # TAB 5: 資質能力
@@ -863,12 +874,14 @@ with tabs[5]:
             with st.spinner("資質能力別集計中..."):
                 r = run_r("competency_analysis", tr, qm_sub, {"group_by": group_by})
             st.session_state.analysis_results["資質能力"] = r
-            plot_attribute(r, "competency_scores", "資質能力", "資質能力別 正答率", group_by)
-            render_ai_panel(r, "competency", [
-                "資質能力別の正答率から、どの資質能力の育成が課題か教えてください。",
-                "グループ間で資質能力別の差が大きい点とその示唆を教えてください。",
-                "管理職・指導主事向けに簡潔にまとめてください。",
-            ])
+    if "資質能力" in st.session_state.analysis_results:
+        r = st.session_state.analysis_results["資質能力"]
+        plot_attribute(r, "competency_scores", "資質能力", "資質能力別 正答率", group_by)
+        render_ai_panel(r, "competency", [
+            "資質能力別の正答率から、どの資質能力の育成が課題か教えてください。",
+            "グループ間で資質能力別の差が大きい点とその示唆を教えてください。",
+            "管理職・指導主事向けに簡潔にまとめてください。",
+        ])
 
 # ════════════════════════════════════════════════════════
 # TAB 6: 解答形式
@@ -884,12 +897,14 @@ with tabs[6]:
             with st.spinner("解答形式別集計中..."):
                 r = run_r("format_analysis", tr, qm_sub, {"group_by": group_by})
             st.session_state.analysis_results["解答形式"] = r
-            plot_attribute(r, "format_scores", "解答形式", "解答形式別 正答率", group_by, "形式名")
-            render_ai_panel(r, "format", [
-                "解答形式別の正答率から、特に苦手な形式と指導のポイントを教えてください。",
-                "記述式・選択式など形式による差異の傾向を教えてください。",
-                "管理職・指導主事向けに簡潔にまとめてください。",
-            ])
+    if "解答形式" in st.session_state.analysis_results:
+        r = st.session_state.analysis_results["解答形式"]
+        plot_attribute(r, "format_scores", "解答形式", "解答形式別 正答率", group_by, "形式名")
+        render_ai_panel(r, "format", [
+            "解答形式別の正答率から、特に苦手な形式と指導のポイントを教えてください。",
+            "記述式・選択式など形式による差異の傾向を教えてください。",
+            "管理職・指導主事向けに簡潔にまとめてください。",
+        ])
 
 # ════════════════════════════════════════════════════════
 # TAB 7: 意識調査
@@ -912,12 +927,14 @@ with tabs[7]:
                     "attitude_master": am_sub.to_dict(orient="records"),
                 })
             st.session_state.analysis_results["意識調査"] = r
-            plot_attitude(r, group_by)
-            render_ai_panel(r, "attitude", [
-                "意識調査の結果から、学習への関与や意欲の傾向を教えてください。",
-                "特に気になる項目とその指導上の示唆を教えてください。",
-                "管理職・指導主事向けに簡潔にまとめてください。",
-            ])
+    if "意識調査" in st.session_state.analysis_results:
+        r = st.session_state.analysis_results["意識調査"]
+        plot_attitude(r, group_by)
+        render_ai_panel(r, "attitude", [
+            "意識調査の結果から、学習への関与や意欲の傾向を教えてください。",
+            "特に気になる項目とその指導上の示唆を教えてください。",
+            "管理職・指導主事向けに簡潔にまとめてください。",
+        ])
 
 # ════════════════════════════════════════════════════════
 # TAB 8: 学力×意識
@@ -937,12 +954,14 @@ with tabs[8]:
                 r = run_r("attitude_x_theta", ar, qm_sub,
                           {"test_data": tr.to_dict(orient="records")})
             st.session_state.analysis_results["学力×意識"] = r
-            plot_attitude_x_theta(r)
-            render_ai_panel(r, "cross", [
-                "学力層と意識調査の関係から、どのような指導上の示唆が得られますか？",
-                "学力が低い層の意識調査の特徴と、支援のヒントを教えてください。",
-                "管理職・指導主事向けに簡潔にまとめてください。",
-            ])
+    if "学力×意識" in st.session_state.analysis_results:
+        r = st.session_state.analysis_results["学力×意識"]
+        plot_attitude_x_theta(r)
+        render_ai_panel(r, "cross", [
+            "学力層と意識調査の関係から、どのような指導上の示唆が得られますか？",
+            "学力が低い層の意識調査の特徴と、支援のヒントを教えてください。",
+            "管理職・指導主事向けに簡潔にまとめてください。",
+        ])
 
 # ════════════════════════════════════════════════════════
 # TAB 9: 個人票（学校・クラス・教科・生徒 の四段階、全体選択は不可）
@@ -950,7 +969,6 @@ with tabs[8]:
 with tabs[9]:
     st.markdown("#### 👤 個人票")
 
-    # 個人票は学校・クラスの指定が必須
     if sel_school == "全体" or sel_class == "全体":
         st.info("個人票を表示するには、上の共通フィルターで **学校** と **クラス** を指定してください。")
     else:
@@ -977,32 +995,39 @@ with tabs[9]:
                     with st.spinner("個人プロファイル生成中..."):
                         r = run_r("individual_profile", tr_all, qm_sub,
                                   {"student_id": sel_student})
+                    # 生徒IDもセットで保存（描画時に参照するため）
                     st.session_state.analysis_results["個人票"] = r
-                    plot_individual(r, sel_student)
-                    render_ai_panel(r, "individual", [
-                        f"{sel_student} の結果の特徴と、この生徒への具体的な指導アドバイスを教えてください。",
-                        "特に正答率が低い領域について、苦手の原因と克服方法を教えてください。",
-                        "保護者向けに分かりやすくこの生徒の結果を説明してください。",
-                    ])
+                    st.session_state["ind_student_id"] = sel_student
 
-                    # 意識調査（個人）
-                    ar_all = get_attitude_results(
-                        school=sel_school, class_id=int(sel_class), subject=sel_subject
-                    )
-                    if not ar_all.empty:
-                        ar_ind = ar_all[ar_all["student_id"] == sel_student]
-                        if not ar_ind.empty:
-                            st.markdown("##### 💭 意識調査スコア（個人）")
-                            fig_att = px.bar(
-                                ar_ind, x="question_id", y="score", color="score",
-                                color_continuous_scale=["#ef4444","#fb923c","#94a3b8","#34d399","#38bdf8"],
-                                range_color=[0,4],
-                                labels={"question_id":"質問ID","score":"スコア"},
-                                title="意識調査 個人スコア（0〜4）",
-                                template=PLOTLY_TEMPLATE,
-                            )
-                            fig_att.update_layout(font_family="Noto Sans JP")
-                            st.plotly_chart(fig_att, use_container_width=True)
+            # ボタン外で常に描画
+            if "個人票" in st.session_state.analysis_results:
+                r = st.session_state.analysis_results["個人票"]
+                disp_student = st.session_state.get("ind_student_id", sel_student)
+                plot_individual(r, disp_student)
+                render_ai_panel(r, "individual", [
+                    f"{disp_student} の結果の特徴と、この生徒への具体的な指導アドバイスを教えてください。",
+                    "特に正答率が低い領域について、苦手の原因と克服方法を教えてください。",
+                    "保護者向けに分かりやすくこの生徒の結果を説明してください。",
+                ])
+
+                # 意識調査（個人）
+                ar_all = get_attitude_results(
+                    school=sel_school, class_id=int(sel_class), subject=sel_subject
+                )
+                if not ar_all.empty:
+                    ar_ind = ar_all[ar_all["student_id"] == disp_student]
+                    if not ar_ind.empty:
+                        st.markdown("##### 💭 意識調査スコア（個人）")
+                        fig_att = px.bar(
+                            ar_ind, x="question_id", y="score", color="score",
+                            color_continuous_scale=["#ef4444","#fb923c","#94a3b8","#34d399","#38bdf8"],
+                            range_color=[0,4],
+                            labels={"question_id":"質問ID","score":"スコア"},
+                            title="意識調査 個人スコア（0〜4）",
+                            template=PLOTLY_TEMPLATE,
+                        )
+                        fig_att.update_layout(font_family="Noto Sans JP")
+                        st.plotly_chart(fig_att, use_container_width=True)
 
 # ════════════════════════════════════════════════════════
 # TAB 10: AI解釈
