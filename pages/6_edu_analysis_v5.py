@@ -285,20 +285,33 @@ def color_map(keys):
 def err(msg):
     st.error(f"⚠️ {msg}")
 
+def add_group_col(df: pd.DataFrame, group_by: str) -> pd.DataFrame:
+    """
+    Rから返るDataFrameにgroup列を付与する。
+    school / class_id 列の有無を確認してから結合し、
+    存在しない列はスキップして利用可能な列だけで group を作る。
+    """
+    df = df.copy()
+    has_school   = "school"   in df.columns
+    has_class_id = "class_id" in df.columns
+
+    if group_by == "class" and has_school and has_class_id:
+        df["group"] = df["school"].astype(str) + "-" + df["class_id"].astype(str)
+    elif has_school:
+        df["group"] = df["school"].astype(str)
+    elif has_class_id:
+        df["group"] = df["class_id"].astype(str)
+    else:
+        df["group"] = "全体"
+    return df
+
 # ════════════════════════════════════════════════════════
 # グラフ描画（v4から踏襲）
 # ════════════════════════════════════════════════════════
 def plot_theta_distribution(result, group_by):
     if "error" in result: return err(result["error"])
-    ind_df = pd.DataFrame(result["individual"])
-    sum_df = pd.DataFrame(result["summary"])
-
-    if group_by == "class":
-        ind_df["group"] = ind_df["school"].astype(str) + "-" + ind_df["class_id"].astype(str)
-        sum_df["group"] = sum_df["school"].astype(str) + "-" + sum_df["class_id"].astype(str)
-    else:
-        ind_df["group"] = ind_df["school"].astype(str)
-        sum_df["group"] = sum_df["school"].astype(str)
+    ind_df = add_group_col(pd.DataFrame(result["individual"]), group_by)
+    sum_df = add_group_col(pd.DataFrame(result["summary"]),    group_by)
 
     groups = sorted(ind_df["group"].unique())
     cmap   = color_map(groups)
@@ -336,11 +349,7 @@ def plot_theta_distribution(result, group_by):
 
 def plot_domain(result, group_by):
     if "error" in result: return err(result["error"])
-    df = pd.DataFrame(result["domain_scores"])
-    if group_by == "class":
-        df["group"] = df["school"].astype(str) + "-" + df["class_id"].astype(str)
-    else:
-        df["group"] = df["school"].astype(str)
+    df = add_group_col(pd.DataFrame(result["domain_scores"]), group_by)
 
     groups = sorted(df["group"].unique())
     cmap   = color_map(groups)
@@ -373,11 +382,7 @@ def plot_domain(result, group_by):
 
 def plot_attribute(result, key, x_col, title, group_by, label_col=None):
     if "error" in result: return err(result["error"])
-    df = pd.DataFrame(result[key])
-    if group_by == "class":
-        df["group"] = df["school"].astype(str) + "-" + df["class_id"].astype(str)
-    else:
-        df["group"] = df["school"].astype(str)
+    df = add_group_col(pd.DataFrame(result[key]), group_by)
 
     x    = label_col if (label_col and label_col in df.columns) else x_col
     cmap = color_map(sorted(df["group"].unique()))
@@ -435,11 +440,7 @@ def plot_item_analysis(result):
 
 def plot_attitude(result, group_by):
     if "error" in result: return err(result["error"])
-    df = pd.DataFrame(result["attitude_dist"])
-    if group_by == "class":
-        df["group"] = df["school"].astype(str) + "-" + df["class_id"].astype(str)
-    else:
-        df["group"] = df["school"].astype(str)
+    df = add_group_col(pd.DataFrame(result["attitude_dist"]), group_by)
 
     score_labels = {0:"0:まったくない",1:"1:あまりない",2:"2:ときどきある",3:"3:よくある",4:"4:いつもある"}
     df["score_label"] = df["score"].map(score_labels)
