@@ -613,12 +613,20 @@ def render_ai_panel(result: dict, tab_key: str, preset_questions: list = None):
             "最も注目すべき点はどこですか？根拠とともに教えてください。",
             "管理職・指導主事向けに簡潔にまとめてください。",
         ]
+        # selectboxの選択をセッションステートで管理し、text_areaに連動させる
         sel = st.selectbox("よくある質問", ["（カスタム入力）"] + presets,
                            key=f"ai_preset_{tab_key}")
+
+        # selectboxで選択したらtext_areaの初期値を更新
+        if sel != "（カスタム入力）":
+            st.session_state[f"ai_q_{tab_key}"] = sel
+        elif f"ai_q_{tab_key}" not in st.session_state:
+            st.session_state[f"ai_q_{tab_key}"] = ""
+
         user_q = st.text_area(
             "AIへの質問",
-            value="" if sel == "（カスタム入力）" else sel,
-            height=80, key=f"ai_q_{tab_key}"
+            height=80,
+            key=f"ai_q_{tab_key}"
         )
         if st.button("🤖 AIに質問する", key=f"ai_btn_{tab_key}", type="primary"):
             if user_q.strip():
@@ -630,10 +638,8 @@ def render_ai_panel(result: dict, tab_key: str, preset_questions: list = None):
                 st.warning("質問を入力してください。")
 
         if st.session_state.get(f"ai_ans_{tab_key}"):
-            st.markdown(
-                f'<div class="ai-box">{st.session_state[f"ai_ans_{tab_key}"]}</div>',
-                unsafe_allow_html=True
-            )
+            # st.markdownで直接表示することで改行・書式が正しく反映される
+            st.markdown(st.session_state[f"ai_ans_{tab_key}"])
 
 
 # ════════════════════════════════════════════════════════
@@ -1057,11 +1063,17 @@ with tabs[10]:
             "保護者向けに分かりやすく結果を説明する文章を作成してください。",
             "次の単元設計に活かすべきポイントを教えてください。",
         ]
-        sel_preset = st.selectbox("よくある質問", ["（カスタム入力）"] + preset_q)
+        sel_preset = st.selectbox("よくある質問", ["（カスタム入力）"] + preset_q,
+                                   key="ai_tab_preset")
+        if sel_preset != "（カスタム入力）":
+            st.session_state["ai_tab_q"] = sel_preset
+        elif "ai_tab_q" not in st.session_state:
+            st.session_state["ai_tab_q"] = ""
+
         user_q = st.text_area(
             "AIへの質問",
-            value="" if sel_preset == "（カスタム入力）" else sel_preset,
             height=90,
+            key="ai_tab_q"
         )
 
         if st.button("🤖 AIに質問する", type="primary"):
@@ -1075,8 +1087,7 @@ with tabs[10]:
                 st.warning("質問を入力してください。")
 
         if st.session_state.get("ai_answer"):
-            st.markdown(f'<div class="ai-box">{st.session_state["ai_answer"]}</div>',
-                        unsafe_allow_html=True)
+            st.markdown(st.session_state["ai_answer"])
 
 # ════════════════════════════════════════════════════════
 # フッター
