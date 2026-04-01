@@ -1,9 +1,10 @@
 """
 rag/ingest.py
-PDF取り込み → チャンク分割 → Embedding → Supabase(psycopg2)格納
+PDF・JSON取り込み → チャンク分割 → Embedding → Supabase(psycopg2)格納
 """
 
 import base64
+import json
 from pathlib import Path
 
 import fitz  # PyMuPDF
@@ -81,6 +82,31 @@ def _embed_texts(texts: list[str], openai_client: OpenAI) -> list[list[float]]:
     return [item.embedding for item in response.data]
 
 
+def _insert_chunks(all_chunks: list[dict], embeddings: list[list[float]]) -> None:
+    """チャンクとEmbeddingをSupabaseに格納する共通処理"""
+    conn = _get_conn()
+    try:
+        with conn.cursor() as cur:
+            for chunk, emb in zip(all_chunks, embeddings):
+                cur.execute(
+                    """
+                    INSERT INTO rag_documents
+                        (source, page, chunk_index, content, embedding)
+                    VALUES (%s, %s, %s, %s, %s::vector)
+                    """,
+                    (
+                        chunk["source"],
+                        chunk["page"],
+                        chunk["chunk_index"],
+                        chunk["content"],
+                        str(emb),
+                    ),
+                )
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def ingest_pdf(pdf_path: str | Path, source_name: str, progress_callback=None) -> dict:
     """
     PDFを取り込んでSupabaseに格納する。
@@ -151,28 +177,76 @@ def ingest_pdf(pdf_path: str | Path, source_name: str, progress_callback=None) -
         _progress(f"Embedding生成中... ({min(i+BATCH, len(texts))}/{len(texts)})", pct)
 
     _progress("Supabaseに保存中...", 0.92)
+    _insert_chunks(all_chunks, embeddings)
 
-    conn = _get_conn()
-    try:
-        with conn.cursor() as cur:
-            for chunk, emb in zip(all_chunks, embeddings):
-                cur.execute(
-                    """
-                    INSERT INTO rag_documents
-                        (source, page, chunk_index, content, embedding)
-                    VALUES (%s, %s, %s, %s, %s::vector)
-                    """,
-                    (
-                        chunk["source"],
-                        chunk["page"],
-                        chunk["chunk_index"],
-                        chunk["content"],
-                        str(emb),
-                    ),
-                )
-        conn.commit()
-    finally:
-        conn.close()
+    _progress("完了！", 1.0)
+    return {"status": "success", "source": source_name, "chunks": len(all_chunks)}
+
+
+def ingest_json(json_path: str | Path, source_name: str, progress_callback=None) -> dict:
+    """
+    FAQ形式のJSONを取り込んでSupabaseに格納する。
+    1つのquestion+answerセットを1チャンクとして扱う。
+
+    Args:
+        json_path: JSONファイルのパス
+        source_name: 保存するファイル名（元のアップロード名）
+        progress_callback: 進捗コールバック (message: str, percent: float)
+
+    Returns:
+        {"status": "success", "source": str, "chunks": int}
+    """
+    def _progress(msg: str, pct: float = 0.0):
+        if progress_callback:
+            progress_callback(msg, pct)
+
+    _progress("JSONを読み込んでいます...", 0.0)
+
+    with open(json_path, encoding="utf-8") as f:
+        data = json.load(f)
+
+    # カテゴリ → items → question/answer を展開してチャンク化
+    all_chunks = []
+    chunk_index = 0
+    for category in data:
+        category_name = category.get("category", "")
+        for item in category.get("items", []):
+            question = item.get("question", "")
+            answer = item.get("answer", "")
+            url = item.get("url", "")
+
+            # チャンクのテキスト：カテゴリ・質問・回答・URLを含める
+            content = f"【カテゴリ】{category_name}\n【質問】{question}\n【回答】{answer}"
+            if url:
+                content += f"\n【URL】{url}"
+
+            all_chunks.append(
+                {
+                    "source": source_name,
+                    "page": 1,  # JSONはページ概念がないため1固定
+                    "chunk_index": chunk_index,
+                    "content": content,
+                }
+            )
+            chunk_index += 1
+
+    if not all_chunks:
+        return {"status": "error", "message": "チャンクを生成できませんでした"}
+
+    _progress("Embeddingを生成中...", 0.4)
+
+    openai_client = _get_openai_client()
+    BATCH = 100
+    texts = [c["content"] for c in all_chunks]
+    embeddings = []
+    for i in range(0, len(texts), BATCH):
+        batch_embeddings = _embed_texts(texts[i : i + BATCH], openai_client)
+        embeddings.extend(batch_embeddings)
+        pct = 0.4 + (min(i + BATCH, len(texts)) / len(texts)) * 0.5
+        _progress(f"Embedding生成中... ({min(i+BATCH, len(texts))}/{len(texts)})", pct)
+
+    _progress("Supabaseに保存中...", 0.92)
+    _insert_chunks(all_chunks, embeddings)
 
     _progress("完了！", 1.0)
     return {"status": "success", "source": source_name, "chunks": len(all_chunks)}

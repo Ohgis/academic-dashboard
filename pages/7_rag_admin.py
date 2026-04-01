@@ -3,8 +3,8 @@ pages/7_rag_admin.py
 RAG管理者画面（PDF取り込み・ドキュメント管理）
 """
 
-import os
 import tempfile
+from pathlib import Path
 
 import streamlit as st
 
@@ -37,22 +37,22 @@ if not _check_admin_auth():
     st.stop()
 
 # ─── ここから管理者向けUI ─────────────────────────────────────
-from rag.ingest import ingest_pdf, delete_document, list_documents
+from rag.ingest import ingest_pdf, ingest_json, delete_document, list_documents
 
 st.title("🛠️ RAG 管理者画面")
 
 # ─── タブ構成 ─────────────────────────────────────────────────
-tab_upload, tab_list = st.tabs(["📤 PDFアップロード", "📋 ドキュメント一覧"])
+tab_upload, tab_list = st.tabs(["📤 ファイルアップロード", "📋 ドキュメント一覧"])
 
 # =============================================
 # Tab 1: PDFアップロード＆取り込み
 # =============================================
 with tab_upload:
-    st.subheader("PDFをアップロードしてインデックス化")
+    st.subheader("ファイルをアップロードしてインデックス化")
 
     uploaded_file = st.file_uploader(
-        "PDFファイルを選択してください",
-        type=["pdf"],
+        "PDF または JSON ファイルを選択してください",
+        type=["pdf", "json"],
         help="複数ファイルを取り込む場合は1ファイルずつアップロードしてください",
     )
 
@@ -60,7 +60,6 @@ with tab_upload:
         st.info(f"選択中: **{uploaded_file.name}** ({uploaded_file.size:,} bytes)")
 
         if st.button("📥 インデックス化を開始", use_container_width=True, type="primary"):
-            # 進捗表示用
             status_text = st.empty()
             progress_bar = st.progress(0.0)
 
@@ -68,19 +67,29 @@ with tab_upload:
                 status_text.write(f"⏳ {message}")
                 progress_bar.progress(min(percent, 1.0))
 
-            # 一時ファイルに保存して処理
+            ext = Path(uploaded_file.name).suffix.lower()
+            suffix = ext if ext in [".pdf", ".json"] else ".tmp"
+
             with tempfile.NamedTemporaryFile(
-                delete=False, suffix=".pdf", prefix="rag_upload_"
+                delete=False, suffix=suffix, prefix="rag_upload_"
             ) as tmp:
                 tmp.write(uploaded_file.getbuffer())
                 tmp_path = tmp.name
 
             try:
-                result = ingest_pdf(
-                    tmp_path,
-                    source_name=uploaded_file.name,
-                    progress_callback=progress_callback,
-                )
+                if ext == ".json":
+                    result = ingest_json(
+                        tmp_path,
+                        source_name=uploaded_file.name,
+                        progress_callback=progress_callback,
+                    )
+                else:
+                    result = ingest_pdf(
+                        tmp_path,
+                        source_name=uploaded_file.name,
+                        progress_callback=progress_callback,
+                    )
+
                 if result["status"] == "success":
                     progress_bar.progress(1.0)
                     status_text.empty()
