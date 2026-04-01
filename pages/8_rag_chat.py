@@ -3,7 +3,9 @@ pages/6_rag_chat.py
 RAGチャット画面（一般ユーザー向け）
 """
 
+import fitz
 import streamlit as st
+from pathlib import Path
 
 # ─── ページ設定 ───────────────────────────────────────────────
 st.set_page_config(
@@ -34,6 +36,31 @@ if not _check_auth():
     st.stop()
 
 # ─── ここから認証済みユーザー向けUI ──────────────────────────
+import requests
+import tempfile
+
+def _get_page_image(source: str, page: int) -> bytes | None:
+    """Supabase StorageからPDFを取得し、指定ページをPNG画像として返す。"""
+    import hashlib
+    safe_name = hashlib.md5(source.encode()).hexdigest() + ".pdf"
+    url = f"{st.secrets['SUPABASE_URL']}/storage/v1/object/rag-pdfs/{safe_name}"
+    headers = {
+        "Authorization": f"Bearer {st.secrets['SUPABASE_SERVICE_KEY']}",
+    }
+    try:
+        response = requests.get(url, headers=headers)
+        if response.status_code != 200:
+            return None
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+            tmp.write(response.content)
+            tmp_path = tmp.name
+        doc = fitz.open(tmp_path)
+        p = doc[page - 1]
+        pix = p.get_pixmap(matrix=fitz.Matrix(2, 2))
+        return pix.tobytes("png")
+    except Exception:
+        return None
+
 from rag.retriever import retrieve
 from rag.generator import generate
 
@@ -49,9 +76,14 @@ for msg in st.session_state["rag_messages"]:
     with st.chat_message(msg["role"]):
         st.write(msg["content"])
         if msg.get("sources"):
-            with st.expander("📄 出典"):
+            with st.expander("📄 参照ページを見る"):
                 for s in msg["sources"]:
                     st.caption(f"• {s['source']}  p.{s['page']}  （類似度: {s['similarity']:.2f}）")
+                    img = _get_page_image(s["source"], s["page"])
+                    if img:
+                        st.image(img)
+                    else:
+                        st.caption("　※ PDFファイルが uploads/ に見つかりません")
 
 # 入力フォーム
 if query := st.chat_input("質問を入力してください"):
@@ -83,9 +115,14 @@ if query := st.chat_input("質問を入力してください"):
 
         st.write(answer)
         if sources:
-            with st.expander("📄 出典"):
+            with st.expander("📄 参照ページを見る"):
                 for s in sources:
                     st.caption(f"• {s['source']}  p.{s['page']}  （類似度: {s['similarity']:.2f}）")
+                    img = _get_page_image(s["source"], s["page"])
+                    if img:
+                        st.image(img)
+                    else:
+                        st.caption("　※ PDFファイルが uploads/ に見つかりません")
 
     # アシスタントメッセージを保存
     st.session_state["rag_messages"].append(

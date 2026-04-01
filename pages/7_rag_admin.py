@@ -2,7 +2,7 @@
 pages/7_rag_admin.py
 RAG管理者画面（PDF取り込み・ドキュメント管理）
 """
-
+import os
 import tempfile
 from pathlib import Path
 
@@ -102,7 +102,8 @@ with tab_upload:
             except Exception as e:
                 st.error(f"❌ 処理中にエラーが発生しました: {e}")
             finally:
-                os.unlink(tmp_path)
+                if 'tmp_path' in locals():
+                    os.unlink(tmp_path)
 
 # =============================================
 # Tab 2: ドキュメント一覧
