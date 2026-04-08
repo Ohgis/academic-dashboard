@@ -12,7 +12,6 @@ import psycopg2
 from openai import OpenAI
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import streamlit as st
-import requests
 
 CHUNK_SIZE = 512
 CHUNK_OVERLAP = 64
@@ -33,20 +32,6 @@ def _get_conn():
 def _get_openai_client() -> OpenAI:
     return OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-def _upload_to_storage(pdf_path: Path, source_name: str) -> bool:
-    """PDFをSupabase Storageにアップロードする（ファイル名をハッシュ化）"""
-    import hashlib
-    safe_name = hashlib.md5(source_name.encode()).hexdigest() + ".pdf"
-    url = f"{st.secrets['SUPABASE_URL']}/storage/v1/object/rag-pdfs/{safe_name}"
-    headers = {
-        "Authorization": f"Bearer {st.secrets['SUPABASE_SERVICE_KEY']}",
-        "Content-Type": "application/pdf",
-    }
-    with open(pdf_path, "rb") as f:
-        response = requests.put(url, headers=headers, data=f)
-    print(f"Storage upload URL: {url}")
-    print(f"Storage upload status: {response.status_code}, {response.text}")
-    return response.status_code in (200, 201)
 
 def _extract_images_text(page: fitz.Page, openai_client: OpenAI) -> str:
     """ページ内の画像をGPT-4o Visionでテキスト化して返す"""
@@ -72,14 +57,9 @@ def _extract_images_text(page: fitz.Page, openai_client: OpenAI) -> str:
                             {
                                 "type": "text",
                                 "text": (
-                                    "これは業務システムのマニュアルに掲載されたスクリーンショットです。"
-                                    "以下の観点で内容を日本語で詳細に説明してください。\n"
-                                    "1. 画面名・ページ名・タイトル（画面上部に表示されているもの）\n"
-                                    "2. ボタン・メニュー・リンクのラベル名（表示されている文字をそのまま）\n"
-                                    "3. 入力フォームのラベル名と入力例\n"
-                                    "4. 画面に表示されている手順・説明文（そのまま書き起こし）\n"
-                                    "5. 表・一覧がある場合はその列名と内容\n"
-                                    "テキストは省略せず、画面に表示されている文字をできる限りそのまま抽出してください。"
+                                    "この画像に含まれるテキストや図表の内容を、"
+                                    "日本語で詳しく説明してください。"
+                                    "テキストがある場合はそのまま書き起こしてください。"
                                 ),
                             },
                         ],
@@ -199,8 +179,6 @@ def ingest_pdf(pdf_path: str | Path, source_name: str, progress_callback=None) -
     _progress("Supabaseに保存中...", 0.92)
     _insert_chunks(all_chunks, embeddings)
 
-    _progress("Storageにアップロード中...", 0.96)
-    _upload_to_storage(pdf_path, source_name)
     _progress("完了！", 1.0)
     return {"status": "success", "source": source_name, "chunks": len(all_chunks)}
 
@@ -227,29 +205,47 @@ def ingest_json(json_path: str | Path, source_name: str, progress_callback=None)
     with open(json_path, encoding="utf-8") as f:
         data = json.load(f)
 
-    # カテゴリ → items → question/answer を展開してチャンク化
+    # JSONの構造を自動判定してチャンク化
+    # 対応形式1: [{"category": ..., "items": [{"question": ..., "answer": ..., "url": ...}]}]
+    # 対応形式2: [{"QUESTION": ..., "ANSWER": ..., "CATEGORY_ID": ...}]（フラット形式）
     all_chunks = []
     chunk_index = 0
-    for category in data:
-        category_name = category.get("category", "")
-        for item in category.get("items", []):
-            question = item.get("question", "")
-            answer = item.get("answer", "")
-            url = item.get("url", "")
 
-            # チャンクのテキスト：カテゴリ・質問・回答・URLを含める
-            content = f"【カテゴリ】{category_name}\n【質問】{question}\n【回答】{answer}"
-            if url:
-                content += f"\n【URL】{url}"
+    # 形式1の判定：最初の要素に "items" キーがあるかどうか
+    is_nested = isinstance(data, list) and len(data) > 0 and "items" in data[0]
 
-            all_chunks.append(
-                {
+    if is_nested:
+        for category in data:
+            category_name = category.get("category", "")
+            for item in category.get("items", []):
+                question = item.get("question", "")
+                answer = item.get("answer", "")
+                url = item.get("url", "")
+                content = f"【カテゴリ】{category_name}\n【質問】{question}\n【回答】{answer}"
+                if url:
+                    content += f"\n【URL】{url}"
+                all_chunks.append({
                     "source": source_name,
-                    "page": 1,  # JSONはページ概念がないため1固定
+                    "page": 1,
                     "chunk_index": chunk_index,
                     "content": content,
-                }
-            )
+                })
+                chunk_index += 1
+    else:
+        # フラット形式（大文字キー対応）
+        for item in data:
+            question = item.get("QUESTION") or item.get("question", "")
+            answer = item.get("ANSWER") or item.get("answer", "")
+            category_id = item.get("CATEGORY_ID", "")
+            content = f"【質問】{question}\n【回答】{answer}"
+            if category_id:
+                content = f"【カテゴリID】{category_id}\n" + content
+            all_chunks.append({
+                "source": source_name,
+                "page": 1,
+                "chunk_index": chunk_index,
+                "content": content,
+            })
             chunk_index += 1
 
     if not all_chunks:
