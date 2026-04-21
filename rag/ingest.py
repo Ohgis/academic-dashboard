@@ -270,6 +270,67 @@ def ingest_json(json_path: str | Path, source_name: str, progress_callback=None)
     return {"status": "success", "source": source_name, "chunks": len(all_chunks)}
 
 
+
+def ingest_text(text_path: str | Path, source_name: str, progress_callback=None) -> dict:
+    """
+    テキストファイルを取り込んでSupabaseに格納する。
+    RecursiveCharacterTextSplitterでチャンク分割する。
+
+    Args:
+        text_path: テキストファイルのパス
+        source_name: 保存するファイル名（元のアップロード名）
+        progress_callback: 進捗コールバック (message: str, percent: float)
+
+    Returns:
+        {"status": "success", "source": str, "chunks": int}
+    """
+    def _progress(msg: str, pct: float = 0.0):
+        if progress_callback:
+            progress_callback(msg, pct)
+
+    _progress("テキストファイルを読み込んでいます...", 0.0)
+
+    with open(text_path, encoding="utf-8") as f:
+        full_text = f.read()
+
+    if not full_text.strip():
+        return {"status": "error", "message": "テキストを抽出できませんでした"}
+
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=CHUNK_SIZE,
+        chunk_overlap=CHUNK_OVERLAP,
+    )
+    chunks = splitter.split_text(full_text)
+
+    all_chunks = [
+        {
+            "source": source_name,
+            "page": 1,
+            "chunk_index": idx,
+            "content": chunk,
+        }
+        for idx, chunk in enumerate(chunks)
+    ]
+
+    _progress("Embeddingを生成中...", 0.4)
+
+    openai_client = _get_openai_client()
+    BATCH = 100
+    texts = [c["content"] for c in all_chunks]
+    embeddings = []
+    for i in range(0, len(texts), BATCH):
+        batch_embeddings = _embed_texts(texts[i : i + BATCH], openai_client)
+        embeddings.extend(batch_embeddings)
+        pct = 0.4 + (min(i + BATCH, len(texts)) / len(texts)) * 0.5
+        _progress(f"Embedding生成中... ({min(i+BATCH, len(texts))}/{len(texts)})", pct)
+
+    _progress("Supabaseに保存中...", 0.92)
+    _insert_chunks(all_chunks, embeddings)
+
+    _progress("完了！", 1.0)
+    return {"status": "success", "source": source_name, "chunks": len(all_chunks)}
+
+
 def delete_document(source_name: str) -> None:
     """指定ファイル名のチャンクをSupabaseから削除"""
     conn = _get_conn()

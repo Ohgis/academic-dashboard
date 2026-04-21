@@ -2,7 +2,7 @@
 pages/7_rag_admin.py
 RAG管理者画面（PDF取り込み・ドキュメント管理）
 """
-import os
+
 import tempfile
 from pathlib import Path
 
@@ -37,7 +37,7 @@ if not _check_admin_auth():
     st.stop()
 
 # ─── ここから管理者向けUI ─────────────────────────────────────
-from rag.ingest import ingest_pdf, ingest_json, delete_document, list_documents
+from rag.ingest import ingest_pdf, ingest_json, ingest_text, delete_document, list_documents
 
 st.title("🛠️ RAG 管理者画面")
 
@@ -52,7 +52,7 @@ with tab_upload:
 
     uploaded_file = st.file_uploader(
         "PDF または JSON ファイルを選択してください",
-        type=["pdf", "json"],
+        type=["pdf", "json", "txt"],
         help="複数ファイルを取り込む場合は1ファイルずつアップロードしてください",
     )
 
@@ -68,7 +68,7 @@ with tab_upload:
                 progress_bar.progress(min(percent, 1.0))
 
             ext = Path(uploaded_file.name).suffix.lower()
-            suffix = ext if ext in [".pdf", ".json"] else ".tmp"
+            suffix = ext if ext in [".pdf", ".json", ".txt"] else ".tmp"
 
             with tempfile.NamedTemporaryFile(
                 delete=False, suffix=suffix, prefix="rag_upload_"
@@ -79,6 +79,12 @@ with tab_upload:
             try:
                 if ext == ".json":
                     result = ingest_json(
+                        tmp_path,
+                        source_name=uploaded_file.name,
+                        progress_callback=progress_callback,
+                    )
+                elif ext == ".txt":
+                    result = ingest_text(
                         tmp_path,
                         source_name=uploaded_file.name,
                         progress_callback=progress_callback,
@@ -102,8 +108,7 @@ with tab_upload:
             except Exception as e:
                 st.error(f"❌ 処理中にエラーが発生しました: {e}")
             finally:
-                if 'tmp_path' in locals():
-                    os.unlink(tmp_path)
+                os.unlink(tmp_path)
 
 # =============================================
 # Tab 2: ドキュメント一覧
