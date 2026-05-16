@@ -9,7 +9,7 @@ from pathlib import Path
 
 # ─── ページ設定 ───────────────────────────────────────────────
 st.set_page_config(
-    page_title="社内マニュアル Q&A",
+    page_title="プラネッツFAQチャットボット",
     page_icon="💬",
     layout="centered",
 )
@@ -19,7 +19,7 @@ def _check_auth() -> bool:
     if st.session_state.get("rag_user_authed"):
         return True
 
-    st.title("💬 社内マニュアル Q&A")
+    st.title("💬 プラネッツFAQチャットボット")
     st.caption("このページはパスワードが必要です")
     pwd = st.text_input("パスワードを入力してください", type="password", key="user_pwd_input")
     if st.button("ログイン"):
@@ -64,8 +64,8 @@ def _get_page_image(source: str, page: int) -> bytes | None:
 from rag.retriever import retrieve
 from rag.generator import generate
 
-st.title("💬 社内マニュアル Q&A")
-st.caption("社内マニュアルに関する質問にお答えします。")
+st.title("💬 プラネッツFAQチャットボット")
+st.caption("プラネッツFAQに関する質問にお答えします。")
 
 # セッション初期化
 if "rag_messages" not in st.session_state:
